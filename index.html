@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Herramienta para practicar dibujo con sesiones cronometradas.">
+    <title>Timed Sketch Tool</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <!-- Navegación principal entre las áreas de la aplicación. -->
+    <header class="site-header">
+        <a class="brand" href="#inicio">Timed Sketch Tool</a>
+        <nav aria-label="Navegación principal">
+            <a href="#sesion">Sesión</a>
+            <a href="#galeria">Galería</a>
+        </nav>
+    </header>
+
+    <main id="inicio">
+        <h1>Practica dibujo a tu ritmo</h1>
+
+        <!-- Configuración previa a una sesión de práctica. -->
+        <section id="sesion" aria-labelledby="sesion-titulo">
+            <h2 id="sesion-titulo">Preparar sesión</h2>
+            <form>
+                <label for="referencias">Imágenes de referencia</label>
+                <input id="referencias" name="referencias" type="file" accept="image/*" multiple>
+
+                <label for="categoria-referencia">Categoría</label>
+                <select id="categoria-referencia" name="categoria-referencia">
+                    <option value="todas">Todas</option>
+                    <option value="poses">Poses</option>
+                    <option value="rostros">Rostros</option>
+                    <option value="manos">Manos</option>
+                    <option value="anatomia">Anatomía</option>
+                </select>
+
+                <label for="duracion">Tiempo por imagen</label>
+                <select id="duracion" name="duracion">
+                    <option value="30">30 segundos</option>
+                    <option value="60">1 minuto</option>
+                    <option value="120">2 minutos</option>
+                    <option value="300">5 minutos</option>
+                    <option value="libre">Modo libre</option>
+                </select>
+
+                <label for="cantidad">Cantidad de imágenes</label>
+                <input id="cantidad" name="cantidad" type="number" min="1" value="10">
+
+                <label class="checkbox-label" for="aleatorio">
+                    <input id="aleatorio" name="aleatorio" type="checkbox">
+                    Orden aleatorio
+                </label>
+
+                <button type="button">Iniciar sesión</button>
+            </form>
+        </section>
+
+        <!-- Espacio de práctica: aquí se mostrarán la referencia y el temporizador. -->
+        <section id="practica" aria-labelledby="practica-titulo">
+            <h2 id="practica-titulo">Modo de práctica</h2>
+            <div class="practice-layout">
+                <div class="reference-area" aria-live="polite">
+                    <p>La imagen de referencia aparecerá aquí.</p>
+                </div>
+                <div class="session-controls">
+                    <p class="timer" aria-label="Tiempo restante">00:30</p>
+                    <p>Imagen <span>0</span> de <span>0</span></p>
+                    <div class="button-row" aria-label="Controles de sesión">
+                        <button type="button" aria-label="Repetir imagen anterior">Anterior</button>
+                        <button type="button">Pausar</button>
+                        <button type="button" aria-label="Avanzar a la siguiente imagen">Siguiente</button>
+                    </div>
+                    <button type="button">Pantalla completa</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Galería personal para consultar y organizar dibujos guardados. -->
+        <section id="galeria" aria-labelledby="galeria-titulo">
+            <div class="section-heading">
+                <h2 id="galeria-titulo">Galería</h2>
+                <button type="button">Agregar dibujo</button>
+            </div>
+            <label for="filtro-galeria">Filtrar por categoría</label>
+            <select id="filtro-galeria" name="filtro-galeria">
+                <option value="todas">Todas</option>
+                <option value="poses">Poses</option>
+                <option value="rostros">Rostros</option>
+                <option value="manos">Manos</option>
+                <option value="anatomia">Anatomía</option>
+            </select>
+            <p class="empty-state">Tus dibujos guardados aparecerán aquí.</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>Timed Sketch Tool</p>
+    </footer>
+</body>
+</html>

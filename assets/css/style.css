@@ -1,0 +1,121 @@
+/* Estilos base para separar y ordenar las áreas principales. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: #202522;
+  background: #f4f5f2;
+  font-family: Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.site-header,
+main,
+footer {
+  width: min(100% - 2rem, 64rem);
+  margin: 0 auto;
+}
+
+.site-header,
+.section-heading,
+.button-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.site-header {
+  min-height: 4rem;
+}
+
+nav,
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+a {
+  color: inherit;
+}
+
+main {
+  padding: 2rem 0;
+}
+
+section {
+  margin: 2rem 0;
+  padding: 1.25rem;
+  border: 1px solid #d7dbd5;
+  background: #fff;
+}
+
+form,
+.session-controls {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 32rem;
+}
+
+input,
+select,
+button {
+  min-height: 2.5rem;
+  padding: 0.4rem 0.65rem;
+  font: inherit;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-label input {
+  min-height: auto;
+}
+
+.practice-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr);
+  gap: 1.5rem;
+}
+
+.reference-area {
+  display: grid;
+  min-height: 20rem;
+  place-items: center;
+  background: #eceeea;
+  text-align: center;
+}
+
+.timer {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.empty-state {
+  padding: 2rem 0;
+  color: #59615b;
+}
+
+footer {
+  padding: 1rem 0;
+}
+
+@media (max-width: 40rem) {
+  .site-header,
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .practice-layout {
+    grid-template-columns: 1fr;
+  }
+}
