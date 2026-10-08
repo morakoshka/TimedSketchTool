@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -62,15 +63,28 @@
             <h2 id="practica-titulo">Modo de práctica</h2>
             <div class="practice-layout">
                 <div class="reference-area" aria-live="polite">
-                    <p>La imagen de referencia aparecerá aquí.</p>
+                    <p id="mensajeReferencia">
+                        La imagen de referencia aparecerá aquí.
+                    </p>
+                    <img id="imagenReferencia" alt="Imagen de referencia para dibujar" hidden
+                        style="max-width: 100%; max-height: 100%; object-fit: contain;">
                 </div>
                 <div class="session-controls">
                     <p class="timer" aria-label="Tiempo restante">00:30</p>
-                    <p>Imagen <span>0</span> de <span>0</span></p>
+                    <p>
+                        Imagen <span id="imagenActual">0</span>
+                        de <span id="totalImagenes">0</span>
+                    </p>
                     <div class="button-row" aria-label="Controles de sesión">
-                        <button type="button" aria-label="Repetir imagen anterior">Anterior</button>
-                        <button type="button">Pausar</button>
-                        <button type="button" aria-label="Avanzar a la siguiente imagen">Siguiente</button>
+                        <button id="btnAnterior" type="button" aria-label="Repetir imagen anterior">
+                            Anterior
+                        </button>
+                        <button id="btnPausar" type="button">
+                            Pausar
+                        </button>
+                        <button id="btnSiguiente" type="button" aria-label="Avanzar a la siguiente imagen">
+                            Siguiente
+                        </button>
                     </div>
                     <button type="button">Pantalla completa</button>
                 </div>
@@ -98,5 +112,7 @@
     <footer>
         <p>Timed Sketch Tool</p>
     </footer>
+    <script src="assets/js/imagenes.js"></script>
 </body>
+
 </html>
