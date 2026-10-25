@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,19 +9,18 @@
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <!-- Navegación principal entre las áreas de la aplicación. -->
     <header class="site-header">
-        <a class="brand" href="#inicio">Timed Sketch Tool</a>
+        <a class="brand" href="#inicio" aria-label="Timed Sketch Tool, inicio"><img class="brand-logo" src="assets/img/timed-sketch-logo.png" alt="Timed Sketch Tool" /></a>
         <nav aria-label="Navegación principal">
             <a href="#sesion">Sesión</a>
             <a href="#galeria">Galería</a>
+            <button id="btnTema" type="button" aria-pressed="false">Modo oscuro</button>
         </nav>
     </header>
 
     <main id="inicio">
         <h1>Practica dibujo a tu ritmo</h1>
 
-        <!-- Configuración previa a una sesión de práctica. -->
         <section id="sesion" aria-labelledby="sesion-titulo">
             <h2 id="sesion-titulo">Preparar sesión</h2>
             <form>
@@ -53,31 +53,41 @@
                     Orden aleatorio
                 </label>
 
-                <button type="button">Iniciar sesión</button>
+                <button type="button" id="btnIniciar">Iniciar sesión</button>
             </form>
         </section>
 
-        <!-- Espacio de práctica: aquí se mostrarán la referencia y el temporizador. -->
         <section id="practica" aria-labelledby="practica-titulo">
             <h2 id="practica-titulo">Modo de práctica</h2>
             <div class="practice-layout">
                 <div class="reference-area" aria-live="polite">
-                    <p>La imagen de referencia aparecerá aquí.</p>
+                    <p id="mensajeReferencia">
+                        La imagen de referencia aparecerá aquí.
+                    </p>
+                    <img id="imagenReferencia" alt="Imagen de referencia para dibujar" hidden>
                 </div>
                 <div class="session-controls">
-                    <p class="timer" aria-label="Tiempo restante">00:30</p>
-                    <p>Imagen <span>0</span> de <span>0</span></p>
+                    <p class="timer" id="temporizador" aria-label="Tiempo restante">00:30</p>
+                    <p>
+                        Imagen <span id="imagenActual">0</span>
+                        de <span id="totalImagenes">0</span>
+                    </p>
                     <div class="button-row" aria-label="Controles de sesión">
-                        <button type="button" aria-label="Repetir imagen anterior">Anterior</button>
-                        <button type="button">Pausar</button>
-                        <button type="button" aria-label="Avanzar a la siguiente imagen">Siguiente</button>
+                        <button id="btnAnterior" type="button" aria-label="Repetir imagen anterior">
+                            Anterior
+                        </button>
+                        <button id="btnPausar" type="button">
+                            Pausar
+                        </button>
+                        <button id="btnSiguiente" type="button" aria-label="Avanzar a la siguiente imagen">
+                            Siguiente
+                        </button>
                     </div>
-                    <button type="button">Pantalla completa</button>
+                    <button id="btnPantallaCompleta" type="button" aria-pressed="false">Pantalla completa</button>
                 </div>
             </div>
         </section>
 
-        <!-- Galería personal para consultar y organizar dibujos guardados. -->
         <section id="galeria" aria-labelledby="galeria-titulo">
             <div class="section-heading">
                 <h2 id="galeria-titulo">Galería</h2>
@@ -96,7 +106,13 @@
     </main>
 
     <footer>
-        <p>Timed Sketch Tool</p>
+        <p>© Timed Sketch Tool · Retro drawing station · 2003 vibes</p>
     </footer>
+    <script src="assets/js/imagenes.js"></script>
+    <script src="assets/js/temporizador.js"></script>
+    <script src="assets/js/sesiones.js"></script>
+    <script src="assets/js/pantalla-completa.js"></script>
+    <script src="assets/js/tema.js"></script>
 </body>
+
 </html>
