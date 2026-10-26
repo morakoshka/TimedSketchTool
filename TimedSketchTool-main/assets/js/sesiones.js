@@ -9,6 +9,14 @@ const selectorCantidad = document.getElementById("cantidad");
 const checkboxAleatorio = document.getElementById("aleatorio");
 const selectorCategoria = document.getElementById("categoria-referencia");
 
+let contextoSesionGaleria = null;
+
+function notificarSesionDisponible() {
+    document.dispatchEvent(new CustomEvent("sesionGaleriaDisponible", {
+        detail: contextoSesionGaleria
+    }));
+}
+
 // Mezclar imágenes aleatoriamente.
 function mezclarImagenes(lista) {
     const resultado = [...lista];
@@ -81,8 +89,15 @@ function iniciarSesion() {
     imagenesSesion = disponibles.slice(0, cantidadFinal);
     indiceActual = 0;
     sesionActiva = true;
+    contextoSesionGaleria = {
+        startedAt: new Date().toISOString(),
+        durationSeconds: Number(selectorDuracion.value),
+        imageCount: imagenesSesion.length,
+        category: categoriaSeleccionada
+    };
 
     mostrarImagen();
+    notificarSesionDisponible();
     iniciarTemporizador();
 }
 

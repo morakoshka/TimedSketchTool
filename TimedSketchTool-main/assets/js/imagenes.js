@@ -34,7 +34,11 @@ inputImagenes.insertAdjacentElement(
 // Cargar imágenes desde la computadora.
 inputImagenes.addEventListener("change", function () {
     sesionActiva = false;
+    contextoSesionGaleria = null;
     detenerTemporizador();
+    document.dispatchEvent(new CustomEvent("sesionGaleriaDisponible", {
+        detail: null
+    }));
 
     // Liberar las imágenes anteriores.
     imagenes.forEach(function (url) {
