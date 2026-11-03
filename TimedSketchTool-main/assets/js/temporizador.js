@@ -1,132 +1,124 @@
+(function () {
+    const selectorDuracion = document.getElementById("duracion");
+    const reloj = document.getElementById("temporizador");
+    const botonPausa = document.getElementById("btnPausar");
+    let intervalo = null;
+    let duracionSegundos = 30;
+    let modoLibre = false;
+    let segundosAcumulados = 0;
+    let inicioTramo = 0;
+    let pausado = false;
 
-/*
-    MÓDULO DEL TEMPORIZADOR
-    Timed Sketch Tool
-
-    Se encarga de:
-    - Iniciar una cuenta regresiva.
-    - Pausar y reanudar.
-    - Detener el reloj.
-    - Avisar cuando termina el tiempo.
-*/
-
-const selectorDuracion = document.getElementById("duracion");
-const reloj = document.getElementById("temporizador");
-const btnPausar = document.getElementById("btnPausar");
-
-let tiempoRestante = 30;
-let intervalo = null;
-let pausado = false;
-
-
-// CONVERTIR SEGUNDOS A MM:SS
-function formatearTiempo(segundos) {
-
-    const minutos = Math.floor(segundos / 60);
-    const segundosRestantes = segundos % 60;
-
-    return String(minutos).padStart(2, "0") + ":" +
-           String(segundosRestantes).padStart(2, "0");
-}
-
-
-// ACTUALIZAR EL RELOJ
-function actualizarReloj() {
-    reloj.textContent = formatearTiempo(tiempoRestante);
-}
-
-
-// OBTENER LA DURACIÓN ELEGIDA
-function obtenerDuracion() {
-    return Number(selectorDuracion.value);
-}
-
-
-// EJECUTAR CADA SEGUNDO
-function avanzarTemporizador() {
-
-    tiempoRestante--;
-    actualizarReloj();
-
-    // Comprobar si terminó el tiempo.
-    if (tiempoRestante <= 0) {
-
-        clearInterval(intervalo);
-        intervalo = null;
-
-        // Avisar al módulo de sesiones.
-        document.dispatchEvent(new Event("tiempoAgotado"));
-    }
-}
-
-
-// INICIAR TEMPORIZADOR
-function iniciarTemporizador() {
-
-    clearInterval(intervalo);
-    intervalo = null;
-
-    const duracion = obtenerDuracion();
-
-    if (!Number.isFinite(duracion) || duracion <= 0) {
-        alert("Selecciona una duración válida.");
-        return;
+    function formatear(segundos) {
+        const valor = Math.max(0, Math.floor(segundos));
+        const horas = Math.floor(valor / 3600);
+        const minutos = Math.floor((valor % 3600) / 60);
+        const segundosRestantes = valor % 60;
+        if (horas > 0) {
+            return String(horas).padStart(2, "0") + ":" +
+                String(minutos).padStart(2, "0") + ":" +
+                String(segundosRestantes).padStart(2, "0");
+        }
+        return String(minutos).padStart(2, "0") + ":" +
+            String(segundosRestantes).padStart(2, "0");
     }
 
-    tiempoRestante = duracion;
-    pausado = false;
-
-    btnPausar.textContent = "Pausar";
-
-    actualizarReloj();
-
-    intervalo = setInterval(avanzarTemporizador, 1000);
-}
-
-
-// PAUSAR O REANUDAR
-function alternarPausa() {
-
-    // No hacer nada si no hay sesión activa.
-    if (!sesionActiva) {
-        return;
+    function transcurrido() {
+        return segundosAcumulados + (intervalo === null || pausado
+            ? 0
+            : (Date.now() - inicioTramo) / 1000);
     }
 
-    if (!pausado) {
-
-        clearInterval(intervalo);
-        intervalo = null;
-
-        pausado = true;
-        btnPausar.textContent = "Reanudar";
-
-    } else {
-
-        pausado = false;
-        btnPausar.textContent = "Pausar";
-
-        intervalo = setInterval(avanzarTemporizador, 1000);
+    function actualizar() {
+        const tiempo = transcurrido();
+        if (modoLibre) {
+            reloj.textContent = formatear(tiempo);
+            return;
+        }
+        const restante = Math.max(0, duracionSegundos - Math.floor(tiempo));
+        reloj.textContent = formatear(restante);
+        if (restante === 0) {
+            segundosAcumulados = duracionSegundos;
+            pausado = true;
+            detenerIntervalo();
+            document.dispatchEvent(new Event("tiempoAgotado"));
+        }
     }
-}
 
+    function detenerIntervalo() {
+        if (intervalo !== null) {
+            clearInterval(intervalo);
+            intervalo = null;
+        }
+    }
 
-// DETENER TEMPORIZADOR
-function detenerTemporizador() {
+    window.temporizadorPractica = {
+        iniciar: function (configuracion) {
+            detenerIntervalo();
+            duracionSegundos = configuracion.duracionSegundos;
+            modoLibre = configuracion.modoLibre;
+            segundosAcumulados = 0;
+            pausado = false;
+            inicioTramo = Date.now();
+            botonPausa.textContent = "Pausar";
+            reloj.setAttribute(
+                "aria-label",
+                modoLibre ? "Tiempo transcurrido" : "Tiempo restante"
+            );
+            actualizar();
+            intervalo = setInterval(actualizar, 200);
+        },
+        alternarPausa: function () {
+            if (!window.TST.sesionActiva) {
+                return;
+            }
+            if (pausado) {
+                pausado = false;
+                inicioTramo = Date.now();
+                botonPausa.textContent = "Pausar";
+                intervalo = setInterval(actualizar, 200);
+            } else {
+                segundosAcumulados = transcurrido();
+                pausado = true;
+                detenerIntervalo();
+                botonPausa.textContent = "Reanudar";
+                actualizar();
+            }
+        },
+        detener: function () {
+            detenerIntervalo();
+            segundosAcumulados = 0;
+            pausado = false;
+            botonPausa.textContent = "Pausar";
+            const libreSeleccionado = selectorDuracion.value === "libre";
+            reloj.setAttribute(
+                "aria-label",
+                libreSeleccionado ? "Tiempo transcurrido" : "Tiempo restante"
+            );
+            reloj.textContent = libreSeleccionado
+                ? "00:00"
+                : formatear(Number(selectorDuracion.value) || 30);
+        },
+        segundosTranscurridos: function () {
+            return Math.floor(transcurrido());
+        },
+        formatear: formatear
+    };
 
-    clearInterval(intervalo);
-    intervalo = null;
-
-    tiempoRestante = 0;
-    pausado = false;
-
-    btnPausar.textContent = "Pausar";
-
-    actualizarReloj();
-}
-
-
-// ACTIVAR BOTÓN PAUSAR
-btnPausar.addEventListener("click", alternarPausa);
-
-// Mostrar duración inicial.
-actualizarReloj();
+    botonPausa.addEventListener("click", function () {
+        window.temporizadorPractica.alternarPausa();
+    });
+    selectorDuracion.addEventListener("change", function () {
+        if (!window.TST.sesionActiva) {
+            const libre = selectorDuracion.value === "libre";
+            reloj.setAttribute(
+                "aria-label",
+                libre ? "Tiempo transcurrido" : "Tiempo restante"
+            );
+            reloj.textContent = libre
+                ? "00:00"
+                : formatear(Number(selectorDuracion.value) || 30);
+        }
+    });
+    botonPausa.disabled = true;
+})();

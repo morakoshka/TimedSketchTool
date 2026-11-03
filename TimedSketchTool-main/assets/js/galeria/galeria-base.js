@@ -8,6 +8,8 @@ window.Galeria = {
         galeriaMensaje: document.getElementById("galeria-mensaje"),
         galeriaUsuario: document.getElementById("galeria-usuario"),
         btnCerrarSesion: document.getElementById("btnCerrarSesion"),
+        enlaceAdmin: document.getElementById("enlace-admin"),
+        panelAdmin: document.getElementById("administracion"),
         btnAgregarDibujo: document.getElementById("btnAgregarDibujo"),
         archivoDibujo: document.getElementById("archivo-dibujo"),
         tituloDibujo: document.getElementById("titulo-dibujo"),
@@ -39,6 +41,7 @@ window.Galeria = {
     },
     tokenCsrf: "",
     usuario: null,
+    categorias: [],
     solicitud: 0,
     contextoSesion: null,
     dibujoSeleccionado: null
@@ -85,15 +88,56 @@ window.Galeria = {
         return new Date(anio, mes - 1, dia).toLocaleDateString("es-MX");
     };
     galeria.etiquetaCategoria = function (categoria) {
-        const etiquetas = {
-            todas: "Todas",
-            sin_categoria: "Sin categoría",
-            poses: "Poses",
-            rostros: "Rostros",
-            manos: "Manos",
-            anatomia: "Anatomía"
-        };
-        return etiquetas[categoria] || "Sin categoría";
+        if (categoria === "todas") {
+            return "Todas";
+        }
+        const opcion = galeria.categorias.find(function (item) {
+            return item.slug === categoria;
+        });
+        return opcion ? opcion.label : "Sin categoría";
+    };
+
+    galeria.actualizarCategorias = function (categorias) {
+        galeria.categorias = categorias;
+        const selectores = [
+            { elemento: document.getElementById("categoria-referencia"), todas: true },
+            { elemento: galeria.ui.categoriaDibujo, todas: false },
+            { elemento: galeria.ui.filtroGaleria, todas: true },
+            { elemento: galeria.ui.editarCategoria, todas: false }
+        ];
+        selectores.forEach(function (item) {
+            const anterior = item.elemento.value;
+            item.elemento.replaceChildren();
+            if (item.todas) {
+                const opcionTodas = document.createElement("option");
+                opcionTodas.value = "todas";
+                opcionTodas.textContent = "Todas";
+                item.elemento.appendChild(opcionTodas);
+            }
+            categorias.forEach(function (categoria) {
+                const opcion = document.createElement("option");
+                opcion.value = categoria.slug;
+                opcion.textContent = categoria.label;
+                item.elemento.appendChild(opcion);
+            });
+            item.elemento.value = categorias.some(function (categoria) {
+                return categoria.slug === anterior;
+            }) ? anterior : (item.todas ? "todas" : "sin_categoria");
+        });
+        if (typeof window.actualizarCategoriasDisponibles === "function") {
+            window.actualizarCategoriasDisponibles(categorias);
+        }
+    };
+    galeria.aplicarConfiguracion = function (configuracion) {
+        document.title = configuracion.app_title;
+        const marca = document.querySelector(".brand");
+        marca.setAttribute("aria-label", configuracion.app_title + ", inicio");
+        marca.querySelector(".sr-only").textContent = configuracion.app_title;
+        marca.querySelector(".brand-logo").alt = configuracion.app_title;
+        document.getElementById("mensaje-bienvenida").textContent =
+            configuracion.welcome_message;
+        document.getElementById("duracion").value =
+            String(configuracion.default_duration_seconds);
     };
 
     // La práctica publica una instantánea opcional para asociarla a un dibujo guardado.
@@ -105,9 +149,12 @@ window.Galeria = {
             ui.incluirSesion.checked = false;
         }
         ui.estadoSesionDibujo.textContent = galeria.contextoSesion
-            ? "Sesión disponible: " + galeria.contextoSesion.imageCount +
-                " imágenes, " + galeria.contextoSesion.durationSeconds +
-                " segundos por imagen."
+            ? galeria.contextoSesion.freeMode
+                ? "Sesión disponible en modo libre: " +
+                    galeria.contextoSesion.imageCount + " imágenes."
+                : "Sesión disponible: " + galeria.contextoSesion.imageCount +
+                    " imágenes, " + galeria.contextoSesion.durationSeconds +
+                    " segundos por imagen."
             : "Inicia una sesión de práctica para poder vincularla.";
     });
 

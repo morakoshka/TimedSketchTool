@@ -32,3 +32,18 @@ document.addEventListener("fullscreenchange", function () {
         : "Pantalla completa";
     btnPantallaCompleta.setAttribute("aria-pressed", String(activa));
 });
+
+document.addEventListener("sesionFinalizada", async function () {
+    if (document.fullscreenElement !== seccionPractica) {
+        return;
+    }
+    try {
+        await document.exitFullscreen();
+        document.getElementById("resumen-sesion").scrollIntoView({
+            behavior: "smooth",
+            block: "nearest"
+        });
+    } catch (error) {
+        console.error("No se pudo salir de pantalla completa al terminar:", error);
+    }
+});

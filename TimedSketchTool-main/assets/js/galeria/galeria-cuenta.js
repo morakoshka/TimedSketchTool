@@ -1,14 +1,25 @@
 (function (galeria) {
     const ui = galeria.ui;
 
-    // Cambiar de cuenta invalida las cargas pendientes y evita mostrar datos anteriores.
-    function actualizarEstadoCuenta(usuario) {
+    galeria.actualizarEstadoCuenta = function (usuario, datosIniciales) {
         galeria.usuario = usuario;
         ui.cuentaForms.hidden = Boolean(usuario);
         ui.cuentaActiva.hidden = !usuario;
         ui.controlesGaleria.hidden = !usuario;
         ui.btnAgregarDibujo.hidden = !usuario;
         ui.galeriaUsuario.hidden = !usuario;
+        ui.enlaceAdmin.hidden = !usuario || !usuario.is_admin;
+        ui.panelAdmin.hidden = !usuario || !usuario.is_admin;
+
+        if (Array.isArray(datosIniciales.categories)) {
+            galeria.actualizarCategorias(datosIniciales.categories);
+        }
+        if (datosIniciales.settings) {
+            galeria.aplicarConfiguracion(datosIniciales.settings);
+        }
+        document.dispatchEvent(new CustomEvent("cuentaActualizada", {
+            detail: usuario
+        }));
 
         if (usuario) {
             ui.cuentaCorreo.textContent = usuario.email;
@@ -24,12 +35,15 @@
                 "Inicia sesión para consultar y guardar tus dibujos.";
             ui.listaGaleria.replaceChildren();
         }
-    }
+    };
 
-    async function enviarCredenciales(evento, accion) {
+    galeria.enviarCredenciales = async function (evento, accion) {
         evento.preventDefault();
         ui.cuentaMensaje.textContent = "";
         const formulario = evento.currentTarget;
+        if (!formulario.reportValidity()) {
+            return;
+        }
         const datosFormulario = new FormData(formulario);
 
         try {
@@ -46,20 +60,13 @@
             ui.cuentaMensaje.textContent = accion === "register"
                 ? "Cuenta creada correctamente."
                 : "Sesión iniciada.";
-            actualizarEstadoCuenta(respuesta.user);
+            galeria.actualizarEstadoCuenta(respuesta.user, respuesta);
         } catch (error) {
             galeria.mostrarError(ui.cuentaMensaje, error);
         }
-    }
+    };
 
-    document.getElementById("form-registro").addEventListener("submit", function (evento) {
-        enviarCredenciales(evento, "register");
-    });
-    document.getElementById("form-inicio-sesion").addEventListener("submit", function (evento) {
-        enviarCredenciales(evento, "login");
-    });
-
-    ui.btnCerrarSesion.addEventListener("click", async function () {
+    galeria.cerrarSesion = async function () {
         ui.cuentaMensaje.textContent = "";
         try {
             const respuesta = await galeria.solicitarApi("logout", {
@@ -68,18 +75,17 @@
                 body: JSON.stringify({})
             });
             galeria.tokenCsrf = respuesta.csrfToken;
-            actualizarEstadoCuenta(null);
+            galeria.actualizarEstadoCuenta(null, respuesta);
             ui.cuentaMensaje.textContent = "Sesión cerrada.";
         } catch (error) {
             galeria.mostrarError(ui.cuentaMensaje, error);
         }
-    });
+    };
 
-    // Obtener sesión y token CSRF antes de permitir cambios autenticados.
     galeria.solicitarApi("session")
         .then(function (respuesta) {
             galeria.tokenCsrf = respuesta.csrfToken;
-            actualizarEstadoCuenta(respuesta.user);
+            galeria.actualizarEstadoCuenta(respuesta.user, respuesta);
         })
         .catch(function (error) {
             ui.cuentaForms.hidden = true;

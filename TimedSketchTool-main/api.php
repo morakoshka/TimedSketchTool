@@ -69,27 +69,69 @@ function leerJson(): array
     return $datos;
 }
 
-function usuarioActual(): ?array
+function usuarioActual(PDO $pdo): ?array
 {
     if (empty($_SESSION['user_id'])) {
         return null;
     }
 
+    $statement = $pdo->prepare(
+        'SELECT id, email, is_admin FROM users WHERE id = :id'
+    );
+    $statement->execute(['id' => (int) $_SESSION['user_id']]);
+    $usuario = $statement->fetch();
+    if (!$usuario) {
+        return null;
+    }
+
     return [
-        'id' => (int) $_SESSION['user_id'],
-        'email' => (string) $_SESSION['user_email']
+        'id' => (int) $usuario['id'],
+        'email' => (string) $usuario['email'],
+        'is_admin' => (bool) $usuario['is_admin']
     ];
 }
 
-function validarCategoria(string $categoria): bool
+function exigirAdministrador(PDO $pdo): int
 {
-    return in_array($categoria, [
-        'sin_categoria',
-        'poses',
-        'rostros',
-        'manos',
-        'anatomia'
-    ], true);
+    $userId = exigirUsuario();
+    $statement = $pdo->prepare(
+        'SELECT is_admin FROM users WHERE id = :id'
+    );
+    $statement->execute(['id' => $userId]);
+    if (!(bool) $statement->fetchColumn()) {
+        errorApi('No tienes permisos para administrar el sistema.', 403);
+    }
+
+    return $userId;
+}
+
+function validarCategoria(PDO $pdo, string $categoria): bool
+{
+    $statement = $pdo->prepare(
+        'SELECT 1 FROM categories WHERE slug = :slug'
+    );
+    $statement->execute(['slug' => $categoria]);
+    return (bool) $statement->fetchColumn();
+}
+
+function categoriasDisponibles(PDO $pdo): array
+{
+    return $pdo->query(
+        'SELECT slug, label, is_system FROM categories ORDER BY is_system DESC, label'
+    )->fetchAll();
+}
+
+function configuracionAplicacion(PDO $pdo): array
+{
+    $valores = $pdo->query(
+        'SELECT setting_key, setting_value FROM app_settings'
+    )->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    return [
+        'app_title' => $valores['app_title'] ?? 'Timed Sketch Tool',
+        'welcome_message' => $valores['welcome_message'] ?? 'Practica dibujo a tu ritmo',
+        'default_duration_seconds' => (int) ($valores['default_duration_seconds'] ?? 30)
+    ];
 }
 
 function validarFechaIso(string $fecha): bool
@@ -118,8 +160,10 @@ if ($accion === 'session') {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
     responderJson([
-        'user' => usuarioActual(),
-        'csrfToken' => $_SESSION['csrf_token']
+        'user' => usuarioActual($pdo),
+        'csrfToken' => $_SESSION['csrf_token'],
+        'categories' => categoriasDisponibles($pdo),
+        'settings' => configuracionAplicacion($pdo)
     ]);
 }
 
@@ -181,8 +225,10 @@ if ($accion === 'register' || $accion === 'login') {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     $_SESSION['user_email'] = $email;
     responderJson([
-        'user' => usuarioActual(),
-        'csrfToken' => $_SESSION['csrf_token']
+        'user' => usuarioActual($pdo),
+        'csrfToken' => $_SESSION['csrf_token'],
+        'categories' => categoriasDisponibles($pdo),
+        'settings' => configuracionAplicacion($pdo)
     ]);
 }
 
@@ -192,7 +238,12 @@ if ($accion === 'logout') {
     $_SESSION = [];
     session_regenerate_id(true);
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    responderJson(['user' => null, 'csrfToken' => $_SESSION['csrf_token']]);
+    responderJson([
+        'user' => null,
+        'csrfToken' => $_SESSION['csrf_token'],
+        'categories' => categoriasDisponibles($pdo),
+        'settings' => configuracionAplicacion($pdo)
+    ]);
 }
 
 if ($accion === 'drawings') {
@@ -204,7 +255,7 @@ if ($accion === 'drawings') {
     if (!is_string($categoria)) {
         errorApi('La categoría seleccionada no es válida.', 422);
     }
-    if ($categoria !== 'todas' && !validarCategoria($categoria)) {
+    if ($categoria !== 'todas' && !validarCategoria($pdo, $categoria)) {
         errorApi('La categoría seleccionada no es válida.', 422);
     }
 
@@ -277,7 +328,7 @@ if ($accion === 'update') {
         errorApi('La descripción no puede superar los 2000 caracteres.', 422);
     }
 
-    if (!validarCategoria($categoria)) {
+    if (!validarCategoria($pdo, $categoria)) {
         errorApi('La categoría seleccionada no es válida.', 422);
     }
 
@@ -392,7 +443,7 @@ if ($accion === 'upload') {
     if (!is_string($categoria)) {
         errorApi('La categoría seleccionada no es válida.', 422);
     }
-    if (!validarCategoria($categoria)) {
+    if (!validarCategoria($pdo, $categoria)) {
         errorApi('La categoría seleccionada no es válida.', 422);
     }
 
@@ -432,10 +483,15 @@ if ($accion === 'upload') {
         $imageCount = $session['imageCount'] ?? null;
         $sessionCategoryValue = $session['category'] ?? null;
         $startedAt = $session['startedAt'] ?? null;
-        if (!is_int($duration) || !in_array($duration, [30, 60, 120, 300], true) ||
+        $freeMode = $session['freeMode'] ?? false;
+        $durationValid = $freeMode === true
+            ? $duration === null
+            : is_int($duration) && in_array($duration, [30, 60, 120, 300], true);
+        if (!is_bool($freeMode) || !$durationValid ||
             !is_int($imageCount) || $imageCount < 1 || $imageCount > 10000 ||
             !is_string($sessionCategoryValue) ||
-            ($sessionCategoryValue !== 'todas' && !validarCategoria($sessionCategoryValue)) ||
+            ($sessionCategoryValue !== 'todas' &&
+                !validarCategoria($pdo, $sessionCategoryValue)) ||
             !is_string($startedAt)) {
             errorApi('La información de la sesión no es válida.', 422);
         }
@@ -523,6 +579,275 @@ if ($accion === 'delete') {
     }
 
     responderJson(['message' => 'Dibujo eliminado de tu galería.']);
+}
+
+if ($accion === 'admin-categories') {
+    exigirMetodo('GET');
+    exigirAdministrador($pdo);
+    responderJson(['categories' => categoriasDisponibles($pdo)]);
+}
+
+if ($accion === 'admin-category-create' || $accion === 'admin-category-update') {
+    exigirMetodo('POST');
+    exigirTokenCsrf();
+    exigirAdministrador($pdo);
+    $datos = leerJson();
+    $slug = $datos['slug'] ?? null;
+    $label = $datos['label'] ?? null;
+    if (!is_string($slug) || !preg_match('/^[a-z0-9_]{2,24}$/', $slug) ||
+        !is_string($label)) {
+        errorApi('Los datos de la categoría no son válidos.', 422);
+    }
+    $label = trim($label);
+    $longitudLabel = preg_match_all('/./us', $label);
+    if ($longitudLabel === false || $longitudLabel < 1 || $longitudLabel > 40) {
+        errorApi('El nombre debe tener entre 1 y 40 caracteres.', 422);
+    }
+
+    if ($accion === 'admin-category-create') {
+        if (in_array($slug, ['sin_categoria', 'todas'], true)) {
+            errorApi('Ese identificador está reservado.', 422);
+        }
+        $statement = $pdo->prepare(
+            'INSERT INTO categories (slug, label) VALUES (:slug, :label)'
+        );
+        try {
+            $statement->execute(['slug' => $slug, 'label' => $label]);
+        } catch (PDOException $error) {
+            if ($error->getCode() === '23000') {
+                errorApi('Ya existe una categoría con ese nombre o identificador.', 409);
+            }
+            throw $error;
+        }
+        responderJson(['message' => 'Categoría creada correctamente.'], 201);
+    }
+
+    $statement = $pdo->prepare(
+        'UPDATE categories SET label = :label WHERE slug = :slug'
+    );
+    try {
+        $statement->execute(['label' => $label, 'slug' => $slug]);
+    } catch (PDOException $error) {
+        if ($error->getCode() === '23000') {
+            errorApi('Ya existe una categoría con ese nombre.', 409);
+        }
+        throw $error;
+    }
+    if ($statement->rowCount() === 0) {
+        $existe = $pdo->prepare('SELECT 1 FROM categories WHERE slug = :slug');
+        $existe->execute(['slug' => $slug]);
+        if (!$existe->fetchColumn()) {
+            errorApi('La categoría solicitada no existe.', 404);
+        }
+    }
+    responderJson(['message' => 'Categoría actualizada correctamente.']);
+}
+
+if ($accion === 'admin-category-delete') {
+    exigirMetodo('POST');
+    exigirTokenCsrf();
+    exigirAdministrador($pdo);
+    $datos = leerJson();
+    $slug = $datos['slug'] ?? null;
+    if (!is_string($slug)) {
+        errorApi('La categoría solicitada no existe.', 404);
+    }
+    $statement = $pdo->prepare(
+        'SELECT is_system FROM categories WHERE slug = :slug'
+    );
+    $statement->execute(['slug' => $slug]);
+    $categoria = $statement->fetch();
+    if (!$categoria) {
+        errorApi('La categoría solicitada no existe.', 404);
+    }
+    if ((bool) $categoria['is_system']) {
+        errorApi('Las categorías predeterminadas no se pueden eliminar.', 409);
+    }
+
+    $referencias = $pdo->prepare(
+        'SELECT COUNT(*) FROM drawings
+         WHERE category = :category OR session_category = :session_category'
+    );
+    $referencias->execute([
+        'category' => $slug,
+        'session_category' => $slug
+    ]);
+    if ((int) $referencias->fetchColumn() > 0) {
+        errorApi('No se puede eliminar una categoría que ya está en uso.', 409);
+    }
+    $statement = $pdo->prepare('DELETE FROM categories WHERE slug = :slug');
+    $statement->execute(['slug' => $slug]);
+    responderJson(['message' => 'Categoría eliminada correctamente.']);
+}
+
+if ($accion === 'admin-drawings') {
+    exigirMetodo('GET');
+    exigirAdministrador($pdo);
+    $dibujos = $pdo->query(
+        'SELECT drawings.id, drawings.title, drawings.category,
+                drawings.drawing_date, users.email
+         FROM drawings
+         INNER JOIN users ON users.id = drawings.user_id
+         ORDER BY drawings.created_at DESC, drawings.id DESC'
+    )->fetchAll();
+    responderJson(['drawings' => $dibujos]);
+}
+
+if ($accion === 'admin-image') {
+    exigirMetodo('GET');
+    exigirAdministrador($pdo);
+    $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT);
+    if (!$id || $id < 1) {
+        errorApi('El dibujo solicitado no existe.', 404);
+    }
+    $statement = $pdo->prepare(
+        'SELECT mime_type, image_data FROM drawings WHERE id = :id'
+    );
+    $statement->execute(['id' => $id]);
+    $dibujo = $statement->fetch();
+    if (!$dibujo) {
+        errorApi('El dibujo solicitado no existe.', 404);
+    }
+    header('Content-Type: ' . $dibujo['mime_type']);
+    header('Content-Disposition: inline');
+    echo is_resource($dibujo['image_data'])
+        ? stream_get_contents($dibujo['image_data'])
+        : $dibujo['image_data'];
+    exit;
+}
+
+if ($accion === 'admin-drawing-delete') {
+    exigirMetodo('POST');
+    exigirTokenCsrf();
+    exigirAdministrador($pdo);
+    $datos = leerJson();
+    $id = filter_var($datos['id'] ?? null, FILTER_VALIDATE_INT);
+    if (!$id || $id < 1) {
+        errorApi('El dibujo solicitado no existe.', 404);
+    }
+    $statement = $pdo->prepare('DELETE FROM drawings WHERE id = :id');
+    $statement->execute(['id' => $id]);
+    if ($statement->rowCount() === 0) {
+        errorApi('El dibujo solicitado no existe.', 404);
+    }
+    responderJson(['message' => 'Dibujo eliminado correctamente.']);
+}
+
+if ($accion === 'admin-users') {
+    exigirMetodo('GET');
+    exigirAdministrador($pdo);
+    $usuarios = $pdo->query(
+        'SELECT users.id, users.email, users.is_admin, users.created_at,
+                COUNT(drawings.id) AS drawing_count
+         FROM users
+         LEFT JOIN drawings ON drawings.user_id = users.id
+         GROUP BY users.id, users.email, users.is_admin, users.created_at
+         ORDER BY users.created_at DESC, users.id DESC'
+    )->fetchAll();
+    responderJson(['users' => $usuarios]);
+}
+
+if ($accion === 'admin-user-role') {
+    exigirMetodo('POST');
+    exigirTokenCsrf();
+    $adminId = exigirAdministrador($pdo);
+    $datos = leerJson();
+    $userId = filter_var($datos['user_id'] ?? null, FILTER_VALIDATE_INT);
+    $isAdmin = $datos['is_admin'] ?? null;
+    if (!$userId || $userId < 1 || !is_bool($isAdmin)) {
+        errorApi('Los datos de permisos no son válidos.', 422);
+    }
+    if ($userId === $adminId && !$isAdmin) {
+        errorApi('No puedes retirar tu propio permiso de administrador.', 409);
+    }
+    $statement = $pdo->prepare(
+        'SELECT is_admin FROM users WHERE id = :id'
+    );
+    $statement->execute(['id' => $userId]);
+    $usuario = $statement->fetch();
+    if (!$usuario) {
+        errorApi('El usuario solicitado no existe.', 404);
+    }
+    $pdo->beginTransaction();
+    try {
+        $administradores = $pdo->query(
+            'SELECT id FROM users WHERE is_admin = 1 FOR UPDATE'
+        )->fetchAll(PDO::FETCH_COLUMN);
+        $statement = $pdo->prepare(
+            'SELECT is_admin FROM users WHERE id = :id'
+        );
+        $statement->execute(['id' => $userId]);
+        $usuario = $statement->fetch();
+        if (!$usuario) {
+            $pdo->rollBack();
+            errorApi('El usuario solicitado no existe.', 404);
+        }
+        if ((bool) $usuario['is_admin'] && !$isAdmin &&
+            count($administradores) <= 1) {
+            $pdo->rollBack();
+            errorApi('El sistema debe conservar al menos un administrador.', 409);
+        }
+        $statement = $pdo->prepare(
+            'UPDATE users SET is_admin = :is_admin WHERE id = :id'
+        );
+        $statement->execute(['is_admin' => $isAdmin ? 1 : 0, 'id' => $userId]);
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $error;
+    }
+    responderJson(['message' => 'Permisos actualizados correctamente.']);
+}
+
+if ($accion === 'admin-settings') {
+    exigirMetodo('GET');
+    exigirAdministrador($pdo);
+    responderJson(['settings' => configuracionAplicacion($pdo)]);
+}
+
+if ($accion === 'admin-settings-update') {
+    exigirMetodo('POST');
+    exigirTokenCsrf();
+    exigirAdministrador($pdo);
+    $datos = leerJson();
+    $titulo = $datos['app_title'] ?? null;
+    $bienvenida = $datos['welcome_message'] ?? null;
+    $duracion = $datos['default_duration_seconds'] ?? null;
+    if (!is_string($titulo) || !is_string($bienvenida) ||
+        !is_int($duracion) || !in_array($duracion, [30, 60, 120, 300], true)) {
+        errorApi('La configuración enviada no es válida.', 422);
+    }
+    $titulo = trim($titulo);
+    $bienvenida = trim($bienvenida);
+    $longitudTitulo = preg_match_all('/./us', $titulo);
+    $longitudBienvenida = preg_match_all('/./us', $bienvenida);
+    if ($longitudTitulo === false || $longitudTitulo < 1 || $longitudTitulo > 100 ||
+        $longitudBienvenida === false || $longitudBienvenida < 1 ||
+        $longitudBienvenida > 160) {
+        errorApi('El título o mensaje de bienvenida supera la longitud permitida.', 422);
+    }
+
+    $statement = $pdo->prepare(
+        'INSERT INTO app_settings (setting_key, setting_value)
+         VALUES (:setting_key, :setting_value)
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
+    );
+    foreach ([
+        'app_title' => $titulo,
+        'welcome_message' => $bienvenida,
+        'default_duration_seconds' => (string) $duracion
+    ] as $key => $value) {
+        $statement->execute([
+            'setting_key' => $key,
+            'setting_value' => $value
+        ]);
+    }
+    responderJson([
+        'message' => 'Configuración guardada correctamente.',
+        'settings' => configuracionAplicacion($pdo)
+    ]);
 }
 
 errorApi('La acción solicitada no existe.', 404);

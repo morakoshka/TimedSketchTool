@@ -151,11 +151,14 @@
         const tieneSesion = Boolean(dibujo.session_started_at);
         ui.detalleSesion.hidden = !tieneSesion;
         if (tieneSesion) {
-            const minutos = Math.floor(dibujo.session_duration_seconds / 60);
-            const segundos = dibujo.session_duration_seconds % 60;
-            const duracion = minutos > 0
-                ? minutos + " min" + (segundos > 0 ? " " + segundos + " s" : "")
-                : segundos + " s";
+            let duracion = "Modo libre";
+            if (dibujo.session_duration_seconds !== null) {
+                const minutos = Math.floor(dibujo.session_duration_seconds / 60);
+                const segundos = dibujo.session_duration_seconds % 60;
+                duracion = minutos > 0
+                    ? minutos + " min" + (segundos > 0 ? " " + segundos + " s" : "")
+                    : segundos + " s";
+            }
             agregarDatoDetalle(
                 ui.detalleInformacionSesion,
                 "Duración por imagen",

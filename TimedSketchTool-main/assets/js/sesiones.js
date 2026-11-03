@@ -1,131 +1,78 @@
+(function (practica) {
+    const botonIniciar = document.getElementById("btnIniciar");
 
-/*
-  Timed Sketch Tool
-  Módulo de controles de sesión
-*/
-
-const btnIniciar = document.getElementById("btnIniciar");
-const selectorCantidad = document.getElementById("cantidad");
-const checkboxAleatorio = document.getElementById("aleatorio");
-const selectorCategoria = document.getElementById("categoria-referencia");
-
-let contextoSesionGaleria = null;
-
-function notificarSesionDisponible() {
-    document.dispatchEvent(new CustomEvent("sesionGaleriaDisponible", {
-        detail: contextoSesionGaleria
-    }));
-}
-
-// Mezclar imágenes aleatoriamente.
-function mezclarImagenes(lista) {
-    const resultado = [...lista];
-
-    for (let i = resultado.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-
-        [resultado[i], resultado[j]] =
-            [resultado[j], resultado[i]];
-    }
-
-    return resultado;
-}
-
-// Iniciar una sesión de práctica.
-function iniciarSesion() {
-    if (imagenes.length === 0) {
-        alert("Primero selecciona imágenes.");
-        return;
-    }
-
-    const cantidad = Number(selectorCantidad.value);
-
-    if (!Number.isInteger(cantidad) || cantidad < 1) {
-        alert("Selecciona una cantidad válida.");
-        return;
-    }
-
-    if (selectorDuracion.value === "libre") {
-        alert("El modo libre todavía está pendiente.");
-        return;
-    }
-
-    // Obtener la categoría seleccionada.
-    const categoriaSeleccionada = selectorCategoria.value;
-
-    // Copiar las imágenes cargadas.
-    let disponibles = [...imagenes];
-
-    // Filtrar si se eligió una categoría específica.
-    if (categoriaSeleccionada !== "todas") {
-        disponibles = disponibles.filter(function (url) {
-            return categoriasImagenes.get(url) ===
-                categoriaSeleccionada;
-        });
-    }
-
-    // Verificar que existan imágenes en esa categoría.
-    if (disponibles.length === 0) {
-        alert(
-            "No hay imágenes disponibles en la categoría seleccionada."
-        );
-        return;
-    }
-
-    // Mezclar si el usuario activó el orden aleatorio.
-    if (checkboxAleatorio.checked) {
-        disponibles = mezclarImagenes(disponibles);
-    }
-
-    // No utilizar más imágenes de las disponibles.
-    const cantidadFinal = Math.min(
-        cantidad,
-        disponibles.length
-    );
-
-    detenerTemporizador();
-
-    // Preparar la sesión.
-    imagenesSesion = disponibles.slice(0, cantidadFinal);
-    indiceActual = 0;
-    sesionActiva = true;
-    contextoSesionGaleria = {
-        startedAt: new Date().toISOString(),
-        durationSeconds: Number(selectorDuracion.value),
-        imageCount: imagenesSesion.length,
-        category: categoriaSeleccionada
+    practica.actualizarEstadoControles = function () {
+        const hayReferencias = practica.referencias.length > 0;
+        const indice = practica.indiceActual;
+        const total = practica.sesionActiva
+            ? practica.imagenesSesion.length
+            : practica.referencias.length;
+        document.getElementById("btnAnterior").disabled =
+            !hayReferencias || indice === 0;
+        document.getElementById("btnSiguiente").disabled =
+            !hayReferencias || (!practica.sesionActiva && indice >= total - 1);
+        document.getElementById("btnPausar").disabled = !practica.sesionActiva;
     };
 
-    mostrarImagen();
-    notificarSesionDisponible();
-    iniciarTemporizador();
-}
+    practica.finalizarSesion = function (completarEjercicioActual) {
+        if (!practica.sesionActiva) {
+            return;
+        }
+        practica.tiempoTotalSegundos +=
+            window.temporizadorPractica.segundosTranscurridos();
+        if (completarEjercicioActual) {
+            practica.ejerciciosCompletados++;
+        }
+        practica.sesionActiva = false;
+        window.temporizadorPractica.detener();
+        practica.actualizarEstadoControles();
+        document.dispatchEvent(new CustomEvent("sesionFinalizada", {
+            detail: {
+                ejerciciosRealizados: practica.ejerciciosCompletados,
+                imagenesSeleccionadas: practica.imagenesSesion.length,
+                tiempoTotalSegundos: practica.tiempoTotalSegundos,
+                modoLibre: practica.seleccion.modoLibre
+            }
+        }));
+    };
 
-// Finalizar una sesión.
-function finalizarSesion() {
-    sesionActiva = false;
-    detenerTemporizador();
-
-    alert(
-        "¡Sesión terminada! Completaste " +
-        imagenesSesion.length +
-        " imágenes."
-    );
-}
-
-// Avanzar automáticamente cuando se agote el tiempo.
-document.addEventListener("tiempoAgotado", function () {
-    if (!sesionActiva) return;
-
-    if (indiceActual < imagenesSesion.length - 1) {
-        indiceActual++;
-
-        mostrarImagen();
-        iniciarTemporizador();
-    } else {
-        finalizarSesion();
+    function iniciarSesion() {
+        try {
+            if (practica.referencias.length === 0) {
+                throw new Error("Primero selecciona imágenes.");
+            }
+            const configuracion = practica.obtenerConfiguracion();
+            practica.imagenesSesion = practica.seleccionarImagenes(configuracion);
+            practica.seleccion = configuracion;
+            practica.indiceActual = 0;
+            practica.ejerciciosCompletados = 0;
+            practica.tiempoTotalSegundos = 0;
+            practica.sesionActiva = true;
+            practica.contextoSesionGaleria = {
+                startedAt: new Date().toISOString(),
+                durationSeconds: configuracion.duracionSegundos,
+                freeMode: configuracion.modoLibre,
+                imageCount: practica.imagenesSesion.length,
+                category: configuracion.categoria
+            };
+            practica.actualizarEstadoControles();
+            practica.mostrarImagen();
+            window.temporizadorPractica.iniciar(configuracion);
+            document.dispatchEvent(new CustomEvent("sesionGaleriaDisponible", {
+                detail: practica.contextoSesionGaleria
+            }));
+            document.dispatchEvent(new Event("sesionIniciada"));
+            document.getElementById("practica").focus();
+        } catch (error) {
+            alert(error.message);
+        }
     }
-});
 
-// Iniciar al presionar el botón.
-btnIniciar.addEventListener("click", iniciarSesion);
+    document.addEventListener("tiempoAgotado", function () {
+        if (practica.sesionActiva) {
+            practica.cambiarImagen(1);
+        }
+    });
+    botonIniciar.addEventListener("click", iniciarSesion);
+    practica.actualizarEstadoControles();
+})(window.TST);
