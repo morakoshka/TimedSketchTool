@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Herramienta para practicar dibujo con sesiones cronometradas.">
+    <title>Timed Sketch Tool</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=20261103-3">
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="#inicio" aria-label="Timed Sketch Tool, inicio">
+            <img class="brand-logo" src="assets/img/timed-sketch-logo.png" alt="">
+            <span class="sr-only">Timed Sketch Tool</span>
+        </a>
+        <nav aria-label="Navegación principal">
+            <a href="#sesion">Sesión</a>
+            <a href="#galeria">Galería</a>
+            <a href="#cuenta">Cuenta</a>
+            <a id="enlace-admin" href="#administracion" hidden>Administración</a>
+            <button id="btnTema" type="button" aria-pressed="false">Modo oscuro</button>
+        </nav>
+    </header>
+
+    <main id="inicio">
+        <h1 id="mensaje-bienvenida">Practica dibujo a tu ritmo</h1>
+
+        <section id="sesion" aria-labelledby="sesion-titulo">
+            <h2 id="sesion-titulo">Preparar sesión</h2>
+            <form>
+                <label for="referencias">Imágenes de referencia</label>
+                <input id="referencias" name="referencias" type="file" accept="image/*" multiple>
+
+                <label for="categoria-referencia">Categoría</label>
+                <select id="categoria-referencia" name="categoria-referencia">
+                    <option value="todas">Todas</option>
+                    <option value="sin_categoria">Sin categoría</option>
+                    <option value="poses">Poses</option>
+                    <option value="rostros">Rostros</option>
+                    <option value="manos">Manos</option>
+                    <option value="anatomia">Anatomía</option>
+                </select>
+
+                <label for="duracion">Tiempo por imagen</label>
+                <select id="duracion" name="duracion">
+                    <option value="30">30 segundos</option>
+                    <option value="60">1 minuto</option>
+                    <option value="120">2 minutos</option>
+                    <option value="300">5 minutos</option>
+                    <option value="libre">Modo libre</option>
+                </select>
+
+                <label for="cantidad">Cantidad de imágenes</label>
+                <input id="cantidad" name="cantidad" type="number" min="1" value="10">
+
+                <label class="checkbox-label" for="aleatorio">
+                    <input id="aleatorio" name="aleatorio" type="checkbox">
+                    Orden aleatorio
+                </label>
+
+                <button type="button" id="btnIniciar">Iniciar sesión</button>
+            </form>
+        </section>
+
+        <section id="practica" aria-labelledby="practica-titulo" tabindex="-1">
+            <h2 id="practica-titulo">Modo de práctica</h2>
+            <div class="practice-layout">
+                <div class="reference-area" aria-live="polite">
+                    <p id="mensajeReferencia">
+                        La imagen de referencia aparecerá aquí.
+                    </p>
+                    <img id="imagenReferencia" alt="Imagen de referencia para dibujar" hidden>
+                </div>
+                <div class="session-controls">
+                    <p class="timer" id="temporizador" aria-label="Tiempo restante">00:30</p>
+                    <p>
+                        Imagen <span id="imagenActual">0</span>
+                        de <span id="totalImagenes">0</span>
+                    </p>
+                    <div class="button-row" aria-label="Controles de sesión">
+                        <button id="btnAnterior" type="button" aria-label="Repetir imagen anterior">
+                            Anterior
+                        </button>
+                        <button id="btnPausar" type="button">
+                            Pausar
+                        </button>
+                        <button id="btnSiguiente" type="button" aria-label="Avanzar a la siguiente imagen">
+                            Siguiente
+                        </button>
+                    </div>
+                    <button id="btnPantallaCompleta" type="button" aria-pressed="false">Pantalla completa</button>
+                    <button id="btnModoZen" type="button" aria-pressed="false" hidden>Modo Zen</button>
+                    <p class="keyboard-hints">
+                        Atajos durante la sesión: Espacio pausar/reanudar, flecha izquierda repetir
+                        y flecha derecha avanzar.
+                    </p>
+                </div>
+            </div>
+        </section>
+        <section id="resumen-sesion" aria-labelledby="resumen-titulo" hidden>
+            <h2 id="resumen-titulo">Resumen de la sesión</h2>
+            <p>Ejercicios realizados: <strong id="resumen-ejercicios">0</strong></p>
+            <p>Tiempo total: <strong id="resumen-tiempo">0 segundos</strong></p>
+            <p id="resumen-detalle"></p>
+        </section>
+
+        <section id="galeria" aria-labelledby="galeria-titulo">
+            <div class="section-heading">
+                <div>
+                    <h2 id="galeria-titulo">Galería personal</h2>
+                    <p id="galeria-usuario" hidden></p>
+                </div>
+                <button type="button" id="btnAgregarDibujo" hidden>Guardar dibujo</button>
+            </div>
+            <p id="galeria-mensaje" role="status" aria-live="polite">
+                Inicia sesión para consultar y guardar tus dibujos.
+            </p>
+            <div id="controles-galeria" hidden>
+                <label for="titulo-dibujo">Nombre del dibujo</label>
+                <input id="titulo-dibujo" type="text" maxlength="100" placeholder="Mi dibujo" required>
+                <label for="descripcion-dibujo">Descripción</label>
+                <textarea id="descripcion-dibujo" maxlength="2000" rows="3"
+                    placeholder="Detalles sobre este dibujo"></textarea>
+                <label for="categoria-dibujo">Categoría</label>
+                <select id="categoria-dibujo">
+                    <option value="sin_categoria">Sin categoría</option>
+                    <option value="poses">Poses</option>
+                    <option value="rostros">Rostros</option>
+                    <option value="manos">Manos</option>
+                    <option value="anatomia">Anatomía</option>
+                </select>
+                <label for="fecha-dibujo">Fecha del dibujo</label>
+                <input id="fecha-dibujo" type="date" required>
+                <label class="checkbox-label" for="incluir-sesion">
+                    <input id="incluir-sesion" type="checkbox" disabled>
+                    Vincular con la sesión de práctica actual
+                </label>
+                <p id="estado-sesion-dibujo" class="session-link-status">
+                    Inicia una sesión de práctica para poder vincularla.
+                </p>
+                <input id="archivo-dibujo" type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
+                <h3>Filtrar dibujos</h3>
+                <label for="filtro-galeria">Filtrar por categoría</label>
+                <select id="filtro-galeria" name="filtro-galeria">
+                    <option value="todas">Todas</option>
+                    <option value="sin_categoria">Sin categoría</option>
+                    <option value="poses">Poses</option>
+                    <option value="rostros">Rostros</option>
+                    <option value="manos">Manos</option>
+                    <option value="anatomia">Anatomía</option>
+                </select>
+                <label for="fecha-desde">Fecha desde</label>
+                <input id="fecha-desde" type="date">
+                <label for="fecha-hasta">Fecha hasta</label>
+                <input id="fecha-hasta" type="date">
+                <button type="button" id="btnLimpiarFiltros">Limpiar filtros</button>
+                <div id="lista-galeria" class="gallery-grid" aria-live="polite"></div>
+            </div>
+            <dialog id="detalle-dibujo" aria-labelledby="detalle-titulo">
+                <div class="drawing-detail">
+                    <div class="section-heading">
+                        <h3 id="detalle-titulo"></h3>
+                        <button type="button" id="btnCerrarDetalle">Cerrar</button>
+                    </div>
+                    <img id="detalle-imagen" alt="">
+                    <dl id="detalle-informacion"></dl>
+                    <button type="button" id="btnEditarDibujo">Editar información</button>
+                    <form id="form-editar-dibujo" class="drawing-edit-form" hidden>
+                        <label for="editar-titulo">Título</label>
+                        <input id="editar-titulo" name="title" type="text" maxlength="100" required>
+                        <label for="editar-descripcion">Descripción</label>
+                        <textarea id="editar-descripcion" name="description" maxlength="2000" rows="4"></textarea>
+                        <label for="editar-categoria">Categoría</label>
+                        <select id="editar-categoria" name="category">
+                            <option value="sin_categoria">Sin categoría</option>
+                            <option value="poses">Poses</option>
+                            <option value="rostros">Rostros</option>
+                            <option value="manos">Manos</option>
+                            <option value="anatomia">Anatomía</option>
+                        </select>
+                        <label for="editar-fecha">Fecha del dibujo</label>
+                        <input id="editar-fecha" name="drawing_date" type="date" required>
+                        <p id="mensaje-edicion" role="status" aria-live="polite"></p>
+                        <div class="button-row">
+                            <button type="submit" id="btnGuardarEdicion">Guardar cambios</button>
+                            <button type="button" id="btnCancelarEdicion">Cancelar</button>
+                        </div>
+                    </form>
+                    <section id="detalle-sesion" aria-labelledby="detalle-sesion-titulo" hidden>
+                        <h4 id="detalle-sesion-titulo">Sesión de práctica</h4>
+                        <dl id="detalle-informacion-sesion"></dl>
+                    </section>
+                </div>
+            </dialog>
+        </section>
+
+        <section id="administracion" aria-labelledby="administracion-titulo" hidden>
+            <h2 id="administracion-titulo">Administración del sistema</h2>
+            <p id="admin-mensaje" role="status" aria-live="polite"></p>
+            <div class="admin-layout">
+                <section aria-labelledby="admin-categorias-titulo">
+                    <h3 id="admin-categorias-titulo">Categorías</h3>
+                    <form id="form-admin-categoria">
+                        <label for="admin-categoria-nombre">Nueva categoría</label>
+                        <input id="admin-categoria-nombre" maxlength="40" required>
+                        <button type="submit">Crear categoría</button>
+                    </form>
+                    <div id="admin-lista-categorias" class="admin-list"></div>
+                </section>
+                <section aria-labelledby="admin-contenido-titulo">
+                    <h3 id="admin-contenido-titulo">Contenido de usuarios</h3>
+                    <div id="admin-lista-contenido" class="admin-list"></div>
+                </section>
+                <section aria-labelledby="admin-usuarios-titulo">
+                    <h3 id="admin-usuarios-titulo">Usuarios y permisos</h3>
+                    <div id="admin-lista-usuarios" class="admin-list"></div>
+                </section>
+                <section aria-labelledby="admin-ajustes-titulo">
+                    <h3 id="admin-ajustes-titulo">Configuración general</h3>
+                    <form id="form-admin-ajustes">
+                        <label for="admin-titulo">Título de la aplicación</label>
+                        <input id="admin-titulo" maxlength="100" required>
+                        <label for="admin-bienvenida">Mensaje de bienvenida</label>
+                        <input id="admin-bienvenida" maxlength="160" required>
+                        <label for="admin-duracion">Duración predeterminada</label>
+                        <select id="admin-duracion">
+                            <option value="30">30 segundos</option>
+                            <option value="60">1 minuto</option>
+                            <option value="120">2 minutos</option>
+                            <option value="300">5 minutos</option>
+                        </select>
+                        <button type="submit">Guardar configuración</button>
+                    </form>
+                </section>
+            </div>
+        </section>
+        <dialog id="admin-imagen-dialog" aria-labelledby="admin-imagen-titulo">
+            <div class="drawing-detail">
+                <div class="section-heading">
+                    <h3 id="admin-imagen-titulo">Dibujo de usuario</h3>
+                    <button type="button" id="admin-cerrar-imagen">Cerrar</button>
+                </div>
+                <img id="admin-imagen" alt="Dibujo guardado por un usuario">
+            </div>
+        </dialog>
+
+        <section id="cuenta" aria-labelledby="cuenta-titulo">
+            <h2 id="cuenta-titulo">Tu cuenta</h2>
+            <p id="cuenta-mensaje" role="status" aria-live="polite"></p>
+            <div id="formularios-cuenta" class="account-forms">
+                <form id="form-registro">
+                    <h3>Crear cuenta</h3>
+                    <label for="registro-correo">Correo electrónico</label>
+                    <input id="registro-correo" name="email" type="email" maxlength="254" autocomplete="email" required>
+                    <label for="registro-contrasena">Contraseña (mínimo 10 caracteres)</label>
+                    <input id="registro-contrasena" name="password" type="password" minlength="10" autocomplete="new-password" required>
+                    <button type="submit">Registrarme</button>
+                </form>
+                <form id="form-inicio-sesion">
+                    <h3>Iniciar sesión</h3>
+                    <label for="inicio-correo">Correo electrónico</label>
+                    <input id="inicio-correo" name="email" type="email" maxlength="254" autocomplete="email" required>
+                    <label for="inicio-contrasena">Contraseña</label>
+                    <input id="inicio-contrasena" name="password" type="password" autocomplete="current-password" required>
+                    <button type="submit">Iniciar sesión</button>
+                </form>
+            </div>
+            <div id="cuenta-activa" hidden>
+                <p>Sesión iniciada como <strong id="cuenta-correo"></strong>.</p>
+                <button type="button" id="btnCerrarSesion">Cerrar sesión</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© Timed Sketch Tool · Retro drawing station · 2003 vibes</p>
+    </footer>
+    <script src="assets/js/estado-practica.js?v=20261112-1"></script>
+    <script src="assets/js/categorias-referencia.js?v=20261103-1"></script>
+    <script src="assets/js/imagenes.js?v=20261112-1"></script>
+    <script src="assets/js/configuracion-sesion.js?v=20261103-1"></script>
+    <script src="assets/js/seleccion-imagenes.js?v=20261103-1"></script>
+    <script src="assets/js/temporizador.js?v=20261103-1"></script>
+    <script src="assets/js/sesiones.js?v=20261112-1"></script>
+    <script src="assets/js/controles-sesion.js?v=20261112-1"></script>
+    <script src="assets/js/atajos-teclado.js?v=20261103-3"></script>
+    <script src="assets/js/resumen-sesion.js?v=20261103-2"></script>
+    <script src="assets/js/modo-zen.js?v=20261103-2"></script>
+    <script src="assets/js/pantalla-completa.js?v=20261103-2"></script>
+    <script src="assets/js/tema.js?v=20261103-1"></script>
+    <script src="assets/js/galeria/galeria-base.js?v=20261103-2"></script>
+    <script src="assets/js/galeria/galeria-eliminacion.js?v=20261103-1"></script>
+    <script src="assets/js/galeria/galeria-consulta.js?v=20261103-1"></script>
+    <script src="assets/js/galeria/galeria-registro.js?v=20261103-1"></script>
+    <script src="assets/js/galeria/galeria-edicion.js?v=20261103-1"></script>
+    <script src="assets/js/galeria/galeria-filtros.js?v=20261103-1"></script>
+    <script src="assets/js/galeria/galeria-registro-usuario.js?v=20261103-1"></script>
+    <script src="assets/js/galeria/galeria-inicio-sesion.js?v=20261103-1"></script>
+    <script src="assets/js/galeria/galeria-cierre-sesion.js?v=20261103-1"></script>
+    <script src="assets/js/galeria/galeria-cuenta.js?v=20261103-1"></script>
+    <script src="assets/js/administracion.js?v=20261103-1"></script>
+</body>
+
+</html>
